@@ -1,6 +1,7 @@
+import uuid
 from sqlalchemy import UUID, Numeric
 from decimal import Decimal
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, MappedColumn
+from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
 
 
 class Base(DeclarativeBase):
@@ -8,11 +9,12 @@ class Base(DeclarativeBase):
 
 class Wallet(Base):
     __tablename__ = 'wallets'
-    id: MappedColumn[UUID] = mapped_column(
-        UUID,
-        primary_key=True
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
     )
-    balance: MappedColumn[Decimal] = mapped_column(
+    balance: Mapped[Decimal] = mapped_column(
         Numeric(
             precision=12,
             scale=2
