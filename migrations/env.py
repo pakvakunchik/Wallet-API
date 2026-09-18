@@ -1,11 +1,13 @@
 import asyncio
 import os
 from logging.config import fileConfig
+
+from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
-from dotenv import load_dotenv
+
 load_dotenv()
 DATABASE_URL = os.getenv("BASE_URL_DB")
 
@@ -22,7 +24,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from app.models import Base, Wallet
+from app.models import Base
 
 target_metadata = Base.metadata
 
@@ -70,9 +72,9 @@ async def run_async_migrations() -> None:
 
     configuration = config.get_section(config.config_ini_section, {})
     if DATABASE_URL:
-       configuration["sqlalchemy.url"] = DATABASE_URL.strip("'/'")
+        configuration["sqlalchemy.url"] = DATABASE_URL.strip("'/'")
     else:
-        raise ValueError('Переменная BASE_URL_DB не найдена или пуста в файле .env')
+        raise ValueError("Переменная BASE_URL_DB не найдена или пуста в файле .env")
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",

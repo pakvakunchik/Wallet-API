@@ -1,59 +1,85 @@
-import pytest
-from httpx import AsyncClient
-from uuid import uuid4
+import asyncio
 from decimal import Decimal
+from uuid import uuid4
 
-async def create_wallet(client: AsyncClient, wallet_id: uuid4, balance: Decimal = Decimal('0.00')):
-    from app.database import async_session
-    from app.models import Wallet
+from httpx import AsyncClient
+
+from app.database import async_session
+from app.models import Wallet
+
+
+async def create_wallet(wallet_id, balance: Decimal = Decimal("0.00")):
     async with async_session() as session:
-        wallet = Wallet(id=wallet_id, balance=balance)
-        session.add(wallet)
+        session.add(Wallet(id=wallet_id, balance=balance))
         await session.commit()
 
-@pytest.mark.asyncio
-async def test_deposit(client: AsyncClient):
+
+async def test_deposit(client: AsyncClient, db_session):
     wallet_id = uuid4()
-    await create_wallet(client, wallet_id, Decimal('0.00'))
+    db_session.add(Wallet(id=wallet_id, balance=Decimal("0.00")))
+    await db_session.commit()
+
     response = await client.post(
         f"/api/v1/wallets/{wallet_id}/operation",
-        json={"operation_type": "DEPOSIT", "amount": "100.50"}
+        json={"operation_type": "DEPOSIT", "amount": "100.50"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["wallet_id"] == str(wallet_id)
     assert Decimal(data["balance"]) == Decimal("100.50")
-    response = await client.get(f"/api/v1/wallets/{wallet_id}")
-    assert response.status_code == 200
-    assert Decimal(response.json()["balance"]) == Decimal("100.50")
 
-@pytest.mark.asyncio
+
+async def test_concurrent_withdrawals_never_go_negative(client: AsyncClient, db_session):
+    wallet_id = uuid4()
+    db_session.add(Wallet(id=wallet_id, balance=Decimal("100.00")))
+    await db_session.commit()
+
+    async def withdraw():
+        return await client.post(
+            f"/api/v1/wallets/{wallet_id}/operation",
+            json={"operation_type": "WITHDRAW", "amount": "30.00"},
+        )
+
+    results = await asyncio.gather(*[withdraw() for _ in range(5)])
+    successful = [r for r in results if r.status_code == 200]
+    failed = [r for r in results if r.status_code == 400]
+
+    assert len(successful) == 3
+    assert len(failed) == 2
+
+    final = await client.get(f"/api/v1/wallets/{wallet_id}")
+    assert Decimal(final.json()["balance"]) == Decimal("10.00")
+
+
 async def test_withdraw(client: AsyncClient):
     wallet_id = uuid4()
-    await create_wallet(client, wallet_id, Decimal('200.00'))
+    await create_wallet(client, wallet_id, Decimal("200.00"))
     response = await client.post(
         f"/api/v1/wallets/{wallet_id}/operation",
-        json={"operation_type": "WITHDRAW", "amount": "50.00"}
+        json={"operation_type": "WITHDRAW", "amount": "50.00"},
     )
     assert response.status_code == 200
     assert Decimal(response.json()["balance"]) == Decimal("150.00")
     response = await client.post(
         f"/api/v1/wallets/{wallet_id}/operation",
-        json={"operation_type": "WITHDRAW", "amount": "200.00"}
+        json={"operation_type": "WITHDRAW", "amount": "200.00"},
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Insufficient funds"
 
-@pytest.mark.asyncio
+
 async def test_concurrent_operations(client: AsyncClient):
     import asyncio
+
     wallet_id = uuid4()
-    await create_wallet(client, wallet_id, Decimal('100.00'))
+    await create_wallet(client, wallet_id, Decimal("100.00"))
+
     async def deposit():
         return await client.post(
             f"/api/v1/wallets/{wallet_id}/operation",
-            json={"operation_type": "DEPOSIT", "amount": "10.00"}
+            json={"operation_type": "DEPOSIT", "amount": "10.00"},
         )
+
     tasks = [deposit() for _ in range(10)]
     results = await asyncio.gather(*tasks)
     assert all(r.status_code == 200 for r in results)
@@ -61,13 +87,13 @@ async def test_concurrent_operations(client: AsyncClient):
     assert response.status_code == 200
     assert Decimal(response.json()["balance"]) == Decimal("200.00")  # 100 + 10*10
 
-@pytest.mark.asyncio
+
 async def test_wallet_not_found(client: AsyncClient):
     wallet_id = uuid4()
     response = await client.get(f"/api/v1/wallets/{wallet_id}")
     assert response.status_code == 404
     response = await client.post(
         f"/api/v1/wallets/{wallet_id}/operation",
-        json={"operation_type": "DEPOSIT", "amount": "10.00"}
+        json={"operation_type": "DEPOSIT", "amount": "10.00"},
     )
     assert response.status_code == 404

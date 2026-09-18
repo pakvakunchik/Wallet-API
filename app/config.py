@@ -1,13 +1,16 @@
-import os
-from pydantic_settings import BaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
-    database_url: str = os.getenv("BASE_URL_DB")
-    app_host: str = 'localhost'
-    app_port: int = 5432
+    database_url: str = Field(alias="BASE_URL_DB")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
+
 
 settings = Settings()
