@@ -38,6 +38,18 @@ docker compose up --build
 
 ### Health: http://localhost:8000/health
 
+### POST `/api/v1/wallets`
+
+Создать новый кошелёк.
+
+**Request:**
+```json
+{
+  "balance": "0.00"
+}
+balance опционален, по умолчанию 0.00. Должен быть ≥ 0.
+
+
 Запуск локально
 bash
 python -m venv .venv

@@ -1,9 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models import Wallet
 
 
@@ -20,3 +18,7 @@ class WalletRepository:
         stmt = select(Wallet.balance).where(Wallet.id == wallet_id)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+    async def create(self, wallet: Wallet) -> Wallet:
+        self.session.add(wallet)
+        await self.session.flush()
+        return wallet
