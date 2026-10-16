@@ -42,5 +42,6 @@ jobs:
 
       - name: Run tests
         env:
+          BASE_URL_DB: postgresql+asyncpg://wallet_user:wallet_pass@localhost:5432/wallet_test_db
           TEST_DATABASE_URL: postgresql+asyncpg://wallet_user:wallet_pass@localhost:5432/wallet_test_db
         run: pytest

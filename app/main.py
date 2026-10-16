@@ -22,5 +22,5 @@ app.include_router(wallets.router)
 
 
 @app.get("/health", tags=["system"])
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> dict[str, str]:
+   return {"status": "ok"}

@@ -1,6 +1,8 @@
 from decimal import Decimal
 from uuid import UUID
+
 from fastapi import HTTPException, status
+
 from app.models import Wallet
 from app.repository.wallet_repository import WalletRepository
 from app.schemas import OperationType
@@ -36,4 +38,3 @@ class WalletService:
     async def create_wallet(self, initial_balance: Decimal) -> Wallet:
         wallet = Wallet(balance=initial_balance)
         return await self.repo.create(wallet)
-

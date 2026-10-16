@@ -1,8 +1,8 @@
 import asyncio
 from decimal import Decimal
 from uuid import uuid4
+
 from httpx import AsyncClient
-from app.models import Wallet
 
 
 async def test_create_wallet(client: AsyncClient):
